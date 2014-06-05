@@ -1,0 +1,313 @@
+/*
+  This Program's 'Dictionary':
+  SHOW: refers to the tv show or movie that is to be scanned
+  KEYWORDS: refers to the kind of words that would indicate it might be scary
+*/
+
+$(document).ready(function()  {
+
+  /*************
+   *** STATE ***
+   *************/
+
+  var show_type_movie;
+  var fears=[];
+  var fear_keywords=[];
+  var fear_name;
+
+  /*************************
+   *** INITIALIZING PAGE ***
+   *************************/
+
+  function init_fear_keywords() {
+    fears[0] = "blood";
+    fears[1] = "clown";
+    fears[2] = "needle";
+    fears[3] = "vomit";
+    fears[4] = "teeth";
+    fears[5] = "snake";
+    fears[6] = "spider";
+
+    fear_keywords[fears[0]] = ["blood","bleed"];
+    fear_keywords[fears[1]] = ["clown","circus"];
+    fear_keywords[fears[2]] = ["needle","injection"];
+    fear_keywords[fears[3]] = ["vomit","throw up"];
+    fear_keywords[fears[4]] = ["tooth","teeth","dentist"];
+    fear_keywords[fears[5]] = ["snake"];
+    fear_keywords[fears[6]] = ["spider"];
+  }
+
+  function populate_fear_dropdown() {
+    for (var i=0; i<fears.length; i++)  {
+      $('#fear_dropdown').append('<div class="item" data-value="'+i+'">'+fears[i]+'</div>');
+    } 
+  }
+
+  function init() {
+    show_type_movie = true;
+    init_fear_keywords();
+    populate_fear_dropdown();
+    $('.ui.dropdown').dropdown();
+    $('.ui.checkbox').checkbox();
+    $('#tvshow_input').hide();
+  }
+
+  init();
+
+  /*****************************
+   *** DISPLAY FUNCTIONALITY ***
+   *****************************/
+
+  function populate_keyword_grid() {
+    var str = "";
+    $('#keyword_grid_body').html('');
+    for (var i=0; i<fear_keywords[fear_name].length; i++) {
+      str += '<tr id="keyword'+i+'"><td>'+fear_keywords[fear_name][i]+'</td>';
+      str += '<td>?</td></tr>';
+      $('#keyword_grid_body').append(str);
+      str = '';   
+    }
+  }
+
+  function populate_keyword_grid_hits(keyword_count)  {
+    var str = '';
+    $('#keyword_grid_body').html('');
+    for(var keyword in keyword_count) {
+      str += '<tr id="keyword'+i+'"><td>' + keyword + '</td>';
+      str += '<td>' + keyword_count[keyword] + '</td></tr>';
+      $('#keyword_grid_body').append(str);
+      str = ''; 
+    } 
+  }
+
+  function display_show_info(imdb_json) {
+    var show_poster = imdb_json.Poster;
+    var show_year = imdb_json.Year;
+    var show_plot = imdb_json.Plot;
+    $('#show_validation #show_poster').attr('src',show_poster);
+    $('#show_validation #show_year').html('Released: ' + show_year);
+    $('#show_validation #show_plot').html(show_plot);
+    $('#show_validation').show();
+    $('#page_title').hide();
+  }
+
+  /************************
+   *** USER INTERACTION ***
+   ************************/
+
+  $('#show_type_toggle').click(function() {
+    if (show_type_movie)  {
+      show_type_movie = false;
+      $('#show_type_label').html('TV Show');
+      $('#movie_input').hide();
+      $('#tvshow_input').show();
+    }
+    else  {
+      show_type_movie = true;
+      $('#show_type_label').html('Movie');
+      $('#tvshow_input').hide();
+      $('#movie_input').show();
+    }
+  });
+
+  $('#fear_dropdown').click(function()  {
+    fear_name = $('.item.active').html();
+    populate_keyword_grid();
+  });
+
+  $('#add_keyword_btn').click(function()  {
+    // add keyword to grid + list
+    fear_keywords[fear_name].push(new_keyword);
+    populate_keyword_grid();
+    $('#custom_keyword_input').val('');
+  });
+
+  $('#search_btn').click(function() {
+    // TODO: validate the movie_name & year is valid
+    if (show_type_movie)  {
+      var movie_title = $('#movie_name').val();
+      var movie_year = $('#movie_year').val();
+      search_imdb_movie(movie_title,movie_year);    
+    }
+    else  {
+      var tvshow_name = $('#tvshow_name').val();
+      var tvshow_season = $('#tvshow_season').val();
+      var tvshow_episode = $('#tvshow_episode').val();
+      search_imdb_tv(tvshow_name,tvshow_season,tvshow_episode)
+    }
+  });
+
+  /********************
+   *** SEARCH LOGIC ***
+   ********************/
+  function get_imdb_JSON(title, year) {
+    // TODO: invalid titles
+    var http;
+    // IE7+, Firefox, Chrome, Opera, Safari
+    if (window.XMLHttpRequest)  {
+      http = new XMLHttpRequest();
+    }
+    // IE6, IE5
+    else  {
+      http = new ActiveXObject('Microsoft.XMLHTTP');
+    }
+
+    if (year != '') {
+      http.open('GET', 'http://www.omdbapi.com/?t=' + title + '&y=' + year, false);    
+    }
+    else  {
+      http.open('GET', 'http://www.omdbapi.com/?t=' + title, false);
+    }
+    http.send(null);
+
+    var omdbData = http.responseText;
+    var omdbJSON = eval('(' + omdbData + ')');
+
+    return omdbJSON;
+  }
+
+  function search_imdb_movie(movie_title,movie_year)  {
+    var imdb_json = get_imdb_JSON(movie_title,movie_year);
+    if (imdb_json.Response == "False")  {
+      alert('Movie not found');
+      return;
+    }
+    // validate with user that this is correct
+    display_show_info(imdb_json);
+
+    $.get('/synopsis/' + imdb_json.imdbID, function(synopsis) {
+      keyword_list = fear_keywords[fear_name];
+      var keyword_count = scan_synopsis(synopsis,keyword_list);
+      populate_keyword_grid_hits(keyword_count);
+    });
+  }
+
+  function search_imdb_tv(tvshow_name,tvshow_season,tvshow_episode)  {
+    var imdb_json = get_imdb_JSON(tvshow_name,'');
+    if (imdb_json.Response == "False")  {
+      alert('TV Series not found');
+      return;
+    }
+    if (imdb_json.Type != 'series') {
+      alert('whoops :(');
+      return;
+    }
+    console.log('/tv/' + imdb_json.imdbID + '/' + tvshow_season);
+    // first get episode id
+    $.get('/tv/' + imdb_json.imdbID + '/' + tvshow_season + '/' + tvshow_episode, function(episode_id) {
+      $.get('/synopsis/' + episode_id, function(synopsis) {
+        keyword_list = fear_keywords[fear_name];
+        var keyword_count = scan_synopsis(synopsis,keyword_list);
+        populate_keyword_grid_hits(keyword_count);
+      });
+    });
+    // validate with user that this is correct
+    display_show_info(imdb_json);
+  }
+
+
+  /**********************
+   *** SCANNING LOGIC ***
+   **********************/
+
+  function init_dictionary(list, init_value)  {
+    var dic = {};
+    for (var i=0; i<list.length; i++)  {
+      dic[list[i]] = init_value;
+    }
+    return dic;
+  }
+
+  // probably won't use
+  function check_if_boring_word2(value, index, ar) {
+    // takes out the 100 more common words
+    var prepositions = ['to','of','in','for','on','with','at','by','from','up']
+    prepositions = prepositions.concat(['about','into','over','after','beneath','under','above']);
+    var others = ['the','and','a','that','i','it','not','he','as','you','this','but','his','they'];
+    others = others.concat(['her','she','or','an','will','my','one','all','would','there','their']);
+    others = others.concat(['time','day','next','before','way','tomorrow','week','place','case','part']);
+    others = others.concat(['without','other','another','few','must','may','let']);
+    var verbs = ['give','gave','got','leave','try','tries','tried','call','calls','called','ask','asks','asked'];
+    verbs = verbs.concat(['tell','tells','told','find','finds','found','want','wants','wanted','see','sees']);    
+    verbs = verbs.concat(['come','comes','came','take','takes','took','know','knows','knew',]);
+    verbs = verbs.concat(['get','gets','got','do','does','did','be','are','is','have','has','had',]);
+    verbs = verbs.concat([ 'go','goes','went','say','says','said','look','looks','think']);
+    verbs = verbs.concat(['make','makes','made','thinks','thought','use','uses','used','work','works','worked']);
+  }
+
+  function check_if_unboring_word(value,index,ar) {
+    if (value.length > 3) {
+      return true;
+    }
+    if (value == '' || value == 'the' || value == 'a' || value == 'of' || value == 'as')  {
+      return false;      
+    }
+    if (value == 'to' || value == 'and' || value == 'it' || value == 'is' || value == 'in')  {
+      return false;      
+    }
+    return true;
+  }
+
+  function lower_case(value,index,ar)  {
+    return value.toLowerCase();
+  }
+
+  function scan_synopsis(synopsis, keywords)  {
+    // return keyword_count;
+    keywords = keywords.map(lower_case);
+    var keyword_count = init_dictionary(keywords,0);
+    synopsis_words = synopsis.split(/\W+/);
+    synopsis_words = synopsis_words.filter(check_if_unboring_word);
+    synopsis_words = synopsis_words.map(lower_case);
+    // ^^cut down "The Fountain" from 880 to 680
+
+    for (var i=0; i<keywords.length; i++) {
+      for (var j=0; j<synopsis_words.length; j++) {
+        if (keywords[i] == synopsis_words[j]) {
+          keyword_count[keywords[i]] += 1;
+        }
+        else  {
+          // looking for plurals
+          if (synopsis_words[j].startsWith(keywords[i]))  {
+            if (synopsis_words[j].endsWith('s') || synopsis_words[j].endsWith('es')) {
+              keyword_count[keywords[i]] += 1;
+            }
+          }
+        }
+      }
+    }
+
+    return keyword_count;
+  }
+})
+
+/*
+  TODO:
+    {x} toggle movie/tv label
+    {x} toggle movie/tv input display
+    {x} create grid
+    {x} dynamically add fears
+    {x} user add keyword
+    {x} clean up duplicates/junk
+    {x} given #hits, populate grid
+    { } when custom fear is selected, clear previous fear from dropdown
+    { } when user loads page for first time, no fear is selected
+    { } add REMOVE buttons for keywords
+    { } ? maybe move default fears/keyword stuff to either python or firebase server
+    { } fix bug where doing a second search
+    { } if season/episode doesn't exist
+    { } get rid of custom fear and say 'default' fear and just use keywords
+  BIGGER TODOs:
+    {x} TV shows
+    { } add help w/ keywords
+    { } add 'suggest keyword'
+    { } add 'suggest fear'
+    { } add 'show sentences w/ keyword' option
+    { } give url to imdb synopsis page
+    { } some kind of saving option whether locally or login
+    { } loading animation while scanning page
+    { } give option for simply giving imdb page
+    { } search imdb instead of omdb for multiple movie results
+    { } edit display_show for tv episodes
+    ID FOR DIV WITH SYNOPOSIS IS 'swiki.2.1'
+*/

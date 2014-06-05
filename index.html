@@ -1,0 +1,111 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Avoid Your Fears!</title>
+  <link rel='stylesheet' type='text/css' href='fears.css'/>
+  <link rel='stylesheet' type='text/css' href='semantic/css/semantic.min.css'/>
+<!--  <link href="assets/favicon.ico" rel="icon" type="image/x-icon" /> -->
+  <script type='text/javascript' src='http://code.jquery.com/jquery-2.1.0.min.js'></script>
+  <script type='text/javascript' src="semantic/javascript/semantic.min.js"></script>
+  <script src="fears.js"></script>
+</head>
+
+<body>
+  <!-- Page Title + Image -->
+  <div id="page_title">
+    <h1>Fears and stuff</h1>
+    <img src="http://placekitten.com/200/300"/>
+  </div>
+
+  <!-- show validation module -->
+  <div id="show_validation">
+    <h2>Is this what you were searching for?</h2>
+    <img id="show_poster"/>
+    <h4 id="show_year"></h4>
+    <p id="show_plot"></p>
+<!--     <button id="show_validation_btn">An action regarding this</button> -->
+    <p>If this isn't what you wanted, check the name and try including a year for more accurate search results</p>
+  </div>
+
+  <!-- Input Form -->
+  <div class="ui form" id="input_form">
+    <!-- choose between tv show or movie -->
+    <div class="inline field">
+      <div class="ui toggle checkbox" id="show_type_toggle">
+        <input type="checkbox">
+        <label id="show_type_label">Movie</label>
+      </div>
+    </div>
+
+    <!-- name of movie + year (opt) input -->
+    <div class="ui two fields" id="movie_input">
+      <div class="field">
+        <label>Movie Name</label>
+        <input type="text" id="movie_name">
+      </div>
+      <div class="field">
+        <label>Year (Optional)</label>
+        <input type="text" id="movie_year">
+      </div>      
+    </div>
+
+    <!-- name of tv show + season# + episode# input -->
+    <div class="ui three fields" id="tvshow_input">
+      <div class="field">
+        <label>TV Show Name</label>
+        <input type="text" id="tvshow_name">
+      </div>
+      <div class="field">
+        <label>Season #</label>
+        <input type="text" id="tvshow_season">
+      </div>
+      <div class="field">
+        <label>Episode #</label>
+        <input type="text" id="tvshow_episode">
+      </div>        
+    </div>  
+
+    <!-- choosing fear section -->
+    <div class="ui two column middle aligned relaxed grid basic segment">
+      <div class="column field">
+        <!-- fear dropdown list -->
+        <label>Select a fear</label>
+        <div class="fluid ui selection dropdown">
+          <input name="fear" type="hidden">
+          <div class="default text">Fear</div>
+          <i class="dropdown icon"></i>
+          <div class="menu" id="fear_dropdown">
+          </div>
+        </div>
+      </div>
+      <div class="ui vertical divider">Or</div>
+      <div class="column field">
+        <!-- option to use different fear -->
+        <label>Use own fear</label>
+        <input type="text" id="custom_fear_name">
+      </div>
+    </div>
+
+    <!-- keyword grid -->
+    <table class="ui table segment">
+      <thead><tr>
+        <th>Keyword</th>
+        <th># of hits</th>
+      </tr></thead>
+      <tbody id="keyword_grid_body">
+      </tbody>
+      <tfoot><tr>
+        <th colspan="1">
+          <input type="text" id="custom_keyword_input" placeholder="custom keyword">
+        </th>
+        <th colspan="1">
+          <div class="ui blue labeled button" id="add_keyword_btn"><i class="add icon"></i> Add Keyword</div>
+        </th>
+      </tr></tfoot>
+    </table>
+
+    <!-- submit button -->
+    <button class="ui green button" id="search_btn">Search</button>
+  </div>
+</body>
+</html>
