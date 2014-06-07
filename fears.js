@@ -6,48 +6,49 @@
 
 $(document).ready(function()  {
 
+  function object_to_array(obj) {
+    var arr = [];
+    for (var index in obj)  {
+      arr.push(obj[index])
+    }
+    return arr;
+  }
+
   /*************
    *** STATE ***
    *************/
+  // default fear data
+  var preset_fear_data;
 
+  // user state
   var show_type_movie;
-  var fears=[];
-  var fear_keywords=[];
-  var fear_name;
+  var curr_keyword_list;
 
   /*************************
    *** INITIALIZING PAGE ***
    *************************/
 
-  function init_fear_keywords() {
-    fears[0] = "blood";
-    fears[1] = "clown";
-    fears[2] = "needle";
-    fears[3] = "vomit";
-    fears[4] = "teeth";
-    fears[5] = "snake";
-    fears[6] = "spider";
-
-    fear_keywords[fears[0]] = ["blood","bleed"];
-    fear_keywords[fears[1]] = ["clown","circus"];
-    fear_keywords[fears[2]] = ["needle","injection"];
-    fear_keywords[fears[3]] = ["vomit","throw up"];
-    fear_keywords[fears[4]] = ["tooth","teeth","dentist"];
-    fear_keywords[fears[5]] = ["snake"];
-    fear_keywords[fears[6]] = ["spider"];
+  function init_preset_data() {  
+    $.get('/get_preset_fear_info/', function(data) {
+      preset_fear_data = data;
+      populate_fear_dropdown(preset_fear_data);
+    });
   }
 
-  function populate_fear_dropdown() {
-    for (var i=0; i<fears.length; i++)  {
-      $('#fear_dropdown').append('<div class="item" data-value="'+i+'">'+fears[i]+'</div>');
-    } 
+  function populate_fear_dropdown(data) {
+    preset_fear_data = object_to_array(data);
+    var str = '';
+    for (var i=0; i<preset_fear_data.length; i++)  {
+      str = '<div class="item" data-value="'+i+'">'+preset_fear_data[i][0]+'</div>';
+      console.log(str);
+      $('#fear_dropdown').append(str);
+    }
+    $('.ui.dropdown').dropdown();
   }
 
   function init() {
     show_type_movie = true;
-    init_fear_keywords();
-    populate_fear_dropdown();
-    $('.ui.dropdown').dropdown();
+    init_preset_data();
     $('.ui.checkbox').checkbox();
     $('#tvshow_input').hide();
   }
@@ -61,8 +62,9 @@ $(document).ready(function()  {
   function populate_keyword_grid() {
     var str = "";
     $('#keyword_grid_body').html('');
-    for (var i=0; i<fear_keywords[fear_name].length; i++) {
-      str += '<tr id="keyword'+i+'"><td>'+fear_keywords[fear_name][i]+'</td>';
+    for (var i=0; i<curr_keyword_list.length; i++) {
+      str += '<tr class="keyword_row" data-value="' + i + '">';
+      str += '<td>' + curr_keyword_list[i] + '</td>';
       str += '<td>?</td></tr>';
       $('#keyword_grid_body').append(str);
       str = '';   
@@ -72,9 +74,10 @@ $(document).ready(function()  {
   function populate_keyword_grid_hits(keyword_count)  {
     var str = '';
     $('#keyword_grid_body').html('');
-    for(var keyword in keyword_count) {
-      str += '<tr id="keyword'+i+'"><td>' + keyword + '</td>';
-      str += '<td>' + keyword_count[keyword] + '</td></tr>';
+    for(var i=0; i<curr_keyword_list.length; i++) {
+      str += '<tr class="keyword_row" data-value="' + i + '">';
+      str += '<td>' + curr_keyword_list[i] + '</td>';
+      str += '<td>' + keyword_count[curr_keyword_list[i]] + '</td></tr>';
       $('#keyword_grid_body').append(str);
       str = ''; 
     } 
@@ -111,13 +114,15 @@ $(document).ready(function()  {
   });
 
   $('#fear_dropdown').click(function()  {
-    fear_name = $('.item.active').html();
+    var index = parseInt($('.item.active').attr('data-value'),10);
+    curr_keyword_list = preset_fear_data[index];
     populate_keyword_grid();
   });
 
   $('#add_keyword_btn').click(function()  {
     // add keyword to grid + list
-    fear_keywords[fear_name].push(new_keyword);
+    var new_keyword = $('#custom_keyword_input').val();
+    curr_keyword_list.push(new_keyword);
     populate_keyword_grid();
     $('#custom_keyword_input').val('');
   });
@@ -176,8 +181,7 @@ $(document).ready(function()  {
     display_show_info(imdb_json);
 
     $.get('/synopsis/' + imdb_json.imdbID, function(synopsis) {
-      keyword_list = fear_keywords[fear_name];
-      var keyword_count = scan_synopsis(synopsis,keyword_list);
+      var keyword_count = scan_synopsis(synopsis,curr_keyword_list);
       populate_keyword_grid_hits(keyword_count);
     });
   }
@@ -196,8 +200,7 @@ $(document).ready(function()  {
     // first get episode id
     $.get('/tv/' + imdb_json.imdbID + '/' + tvshow_season + '/' + tvshow_episode, function(episode_id) {
       $.get('/synopsis/' + episode_id, function(synopsis) {
-        keyword_list = fear_keywords[fear_name];
-        var keyword_count = scan_synopsis(synopsis,keyword_list);
+        var keyword_count = scan_synopsis(synopsis,curr_keyword_list);
         populate_keyword_grid_hits(keyword_count);
       });
     });
@@ -216,23 +219,6 @@ $(document).ready(function()  {
       dic[list[i]] = init_value;
     }
     return dic;
-  }
-
-  // probably won't use
-  function check_if_boring_word2(value, index, ar) {
-    // takes out the 100 more common words
-    var prepositions = ['to','of','in','for','on','with','at','by','from','up']
-    prepositions = prepositions.concat(['about','into','over','after','beneath','under','above']);
-    var others = ['the','and','a','that','i','it','not','he','as','you','this','but','his','they'];
-    others = others.concat(['her','she','or','an','will','my','one','all','would','there','their']);
-    others = others.concat(['time','day','next','before','way','tomorrow','week','place','case','part']);
-    others = others.concat(['without','other','another','few','must','may','let']);
-    var verbs = ['give','gave','got','leave','try','tries','tried','call','calls','called','ask','asks','asked'];
-    verbs = verbs.concat(['tell','tells','told','find','finds','found','want','wants','wanted','see','sees']);    
-    verbs = verbs.concat(['come','comes','came','take','takes','took','know','knows','knew',]);
-    verbs = verbs.concat(['get','gets','got','do','does','did','be','are','is','have','has','had',]);
-    verbs = verbs.concat([ 'go','goes','went','say','says','said','look','looks','think']);
-    verbs = verbs.concat(['make','makes','made','thinks','thought','use','uses','used','work','works','worked']);
   }
 
   function check_if_unboring_word(value,index,ar) {
@@ -293,7 +279,7 @@ $(document).ready(function()  {
     { } when custom fear is selected, clear previous fear from dropdown
     { } when user loads page for first time, no fear is selected
     { } add REMOVE buttons for keywords
-    { } ? maybe move default fears/keyword stuff to either python or firebase server
+    {x} ? maybe move default fears/keyword stuff to either python or firebase server
     { } fix bug where doing a second search
     { } if season/episode doesn't exist
     { } get rid of custom fear and say 'default' fear and just use keywords

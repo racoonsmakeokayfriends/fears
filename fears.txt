@@ -1,0 +1,7 @@
+blood,bleed
+clown,circus
+needle,injection
+vomit,throw up,puke
+teeth,tooth,dentist
+snake,cobra
+spider

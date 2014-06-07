@@ -27,5 +27,19 @@ def get_tv_show(imdb_id,season_num,episode_num):
 			return tag['href'].split('/')[2]
 	return None
 
+@route('/get_preset_fear_info/')
+def get_preset_fear_info():
+	print 'yolo'
+	f = open('fears.txt')
+	data = {}
+	index = 0
+	for line in f:
+		keyword_list = line.strip('\n').split(',')
+		data[index] = keyword_list
+		index += 1
+	print data
+	return data
+
 if __name__ == '__main__':
-	run(host='localhost',port=8080)
+	run(host='localhost',port=6060)
+	# print get_preset_fear_info()
